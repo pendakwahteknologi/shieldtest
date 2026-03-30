@@ -37,6 +37,11 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   });
 
   if (!response.ok) {
+    // Redirect to login on 401
+    if (response.status === 401 && !path.includes('/auth/login')) {
+      window.location.href = '/shieldtest/login';
+      throw new ApiError(401, 'UNAUTHENTICATED', 'Session expired');
+    }
     const errorBody = await response.json().catch(() => ({ error: { code: 'UNKNOWN', message: 'Request failed' } }));
     throw new ApiError(response.status, errorBody.error?.code || 'UNKNOWN', errorBody.error?.message || 'Request failed');
   }
