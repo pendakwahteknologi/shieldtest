@@ -188,7 +188,7 @@ All tables use UUID primary keys and timestamps.
 
 ### Indexes
 - indicators(hostname), indicators(category, is_active)
-- benchmark_run_items(run_id)
+- benchmark_run_items(run_id), benchmark_run_items(indicator_id)
 - benchmark_runs(status)
 - probe_agents(token_hash)
 - audit_logs(created_at), audit_logs(entity_type, entity_id)
@@ -291,9 +291,9 @@ Frontend polls `GET /runs/:id` every 5 seconds while status is `running`. The `c
 - `GET /probes` — list probes (session auth)
 - `POST /probes/register` — register probe, returns `{ probe_id, token }` once (session auth). Probe must store both.
 - `DELETE /probes/:id` — delete probe, revokes token (session auth)
-- `POST /probes/:id/heartbeat` — probe check-in (token auth)
-- `GET /probes/:id/jobs` — probe polls for pending work (token auth). Returns: `{ job_id: string, run_id: string, items: [{ item_id: string, hostname: string, category: string }], config: { timeout_ms: number, do_http_check: boolean } }`. Max 50 items per batch. Returns empty `{ items: [] }` when no work is available.
-- `POST /probes/:id/results` — probe submits results (token auth). Payload: `{ job_id: string, results: [{ item_id: string, verdict: Verdict, latency_ms: number, evidence: EvidenceJson }] }`
+- `POST /probes/:id/heartbeat` — probe check-in (token auth; backend validates token belongs to `:id`)
+- `GET /probes/:id/jobs` — probe polls for pending work (token auth; backend validates token belongs to `:id`). Returns: `{ job_id: string, run_id: string, items: [{ item_id: string, hostname: string, category: string }], config: { timeout_ms: number, do_http_check: boolean } }`. Max 50 items per batch. Returns empty `{ items: [] }` when no work is available.
+- `POST /probes/:id/results` — probe submits results (token auth; backend validates token belongs to `:id`). Payload: `{ job_id: string, results: [{ item_id: string, verdict: Verdict, latency_ms: number, evidence: EvidenceJson }] }`
 
 ### Probe job lifecycle
 
@@ -400,7 +400,7 @@ Lightweight Node.js script for any device on the test network.
 
 ### Flow
 1. Register probe via web UI, receive token
-2. Configure `.env` on probe device (server URL + token)
+2. Configure `.env` on probe device (server URL, probe ID, and token)
 3. Polling loop: `GET /probes/:id/jobs` every 3 seconds when idle
 4. Execute per domain: DNS lookup → optional HEAD request → classify verdict
 5. Submit batch results: `POST /probes/:id/results`
@@ -420,7 +420,7 @@ Two-stage heuristic:
 1. **IP comparison:** if the resolved IP matches a known block page IP configured per-probe (e.g. the router's LAN IP like `192.168.1.1`), flag as `BLOCKED_BLOCKPAGE`.
 2. **HTTP fingerprint:** if HEAD returns HTTP 200 but `content-length` < 512 bytes AND the response contains a `Location` redirect to a known block page path (e.g. `/blocked`, `/filter`), or the `server` header matches a configured block page signature (e.g. `FortiGuard`, `Sophos`, `pfSense`), flag as `BLOCKED_BLOCKPAGE`.
 
-Block page signatures are configurable in the probe's `.env` file. This is a best-effort heuristic — results flagged as `BLOCKED_BLOCKPAGE` should be reviewed. Items that don't match any heuristic remain `ALLOWED`.
+Block page signatures are configurable in the probe's `.env` file. If the HEAD response omits `content-length`, the HTTP fingerprint check is skipped and only the IP comparison stage applies. This is a best-effort heuristic — results flagged as `BLOCKED_BLOCKPAGE` should be reviewed. Items that don't match any heuristic remain `ALLOWED`.
 
 ### Constraints
 - Concurrency: 5 concurrent checks (configurable)
@@ -459,9 +459,11 @@ location /shieldtest/assets/ {
 }
 
 # ShieldTest frontend — index.html and SPA fallback (no-cache)
+# Note: using root + rewrite instead of alias to avoid try_files/alias pitfall
 location /shieldtest/ {
-    alias /opt/shieldtest/packages/frontend/dist/;
-    try_files $uri $uri/ /shieldtest/index.html;
+    root /opt/shieldtest/packages/frontend/dist;
+    rewrite ^/shieldtest/(.*)$ /$1 break;
+    try_files $uri $uri/ /index.html;
     add_header Cache-Control "no-cache";
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options DENY always;
@@ -469,7 +471,7 @@ location /shieldtest/ {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'" always;
 }
 
-# ShieldTest API
+# ShieldTest API (CSP omitted intentionally — API returns JSON, not HTML)
 location /shieldtest/api/ {
     proxy_pass http://127.0.0.1:3847/shieldtest/api/;
     proxy_set_header Host $host;
