@@ -17,19 +17,24 @@ export function createFeodoConnector(feedUrl: string): SourceConnector {
         const line = lines[i].trim();
         if (!line || line.startsWith('#')) continue;
 
-        // CSV format: first_seen_utc,dst_ip,dst_port,c2_status,last_online,malware
+        // This feed is plain IPs, one per line
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(line)) {
+          records.push({
+            rawHostname: line,
+            category: 'c2',
+            confidence: 90,
+          });
+          continue;
+        }
+
+        // Also handle CSV format: first_seen_utc,dst_ip,dst_port,...
         const parts = line.split(',');
-        if (parts.length < 6) continue;
-
-        const ip = parts[1]?.trim();
-        if (!ip || !/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) continue;
-
-        // We'll store IP as hostname for DNS/reachability testing
-        records.push({
-          rawHostname: ip,
-          category: 'c2',
-          confidence: 90,
-        });
+        if (parts.length >= 2) {
+          const ip = parts[1]?.trim();
+          if (ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+            records.push({ rawHostname: ip, category: 'c2', confidence: 90 });
+          }
+        }
       }
 
       return { records, errors };

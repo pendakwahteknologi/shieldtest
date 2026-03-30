@@ -25,12 +25,14 @@ export function createThreatFoxConnector(feedUrl: string): SourceConnector {
         const line = lines[i].trim();
         if (!line || line.startsWith('#')) continue;
 
-        // CSV: first_seen_utc,ioc_id,ioc_value,ioc_type,threat_type,fk_malware,...
-        const match = line.match(/"([^"]*?)","(\d+)","([^"]*?)","([^"]*?)","([^"]*?)","([^"]*?)"/);
-        if (!match) continue;
+        // CSV: "first_seen_utc", "ioc_id", "ioc_value", "ioc_type", "threat_type", ...
+        // Note: fields may have spaces after commas
+        const fields = line.match(/"([^"]*)"/g);
+        if (!fields || fields.length < 5) continue;
 
-        const iocValue = match[3];
-        const iocType = match[4];
+        const clean = (s: string) => s.replace(/^"|"$/g, '').trim();
+        const iocValue = clean(fields[2]);
+        const iocType = clean(fields[3]);
 
         // Only use domain and URL type IOCs
         if (iocType === 'domain') {
