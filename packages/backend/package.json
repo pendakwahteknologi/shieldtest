@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "migrate": "drizzle-kit migrate",
     "generate": "drizzle-kit generate",
-    "create-user": "tsx src/scripts/create-user.ts"
+    "create-user": "tsx src/scripts/create-user.ts",
+    "seed-sources": "tsx src/scripts/seed-sources.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^9.3.0",

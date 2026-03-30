@@ -13,7 +13,8 @@
     "dev:frontend": "npm run dev -w packages/frontend",
     "db:migrate": "npm run migrate -w packages/backend",
     "db:generate": "npm run generate -w packages/backend",
-    "create-user": "npm run create-user -w packages/backend"
+    "create-user": "npm run create-user -w packages/backend",
+    "seed-sources": "npm run seed-sources -w packages/backend"
   },
   "engines": {
     "node": ">=20.0.0"
