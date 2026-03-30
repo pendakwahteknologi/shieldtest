@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import { checkDns } from './dns.js';
+import { checkDns, checkDohBypass } from './dns.js';
 import { checkHttp } from './http.js';
 
 interface JobItem { itemId: string; hostname: string; category: string; }
@@ -76,6 +76,33 @@ export async function pollAndExecute(): Promise<{ hadWork: boolean; itemCount: n
 
     const blocked = results.filter((r) => r.verdict.startsWith('BLOCKED')).length;
     const allowed = results.filter((r) => r.verdict === 'ALLOWED').length;
+
+    // DoH bypass check: test a sample of blocked domains via DoH
+    // If DoH resolves them, the firewall can be bypassed
+    const blockedItems = results.filter((r) => r.verdict.startsWith('BLOCKED'));
+    if (blockedItems.length > 0) {
+      const sample = blockedItems.slice(0, 3); // test up to 3
+      console.log(`  Checking DoH bypass on ${sample.length} blocked domains...`);
+      for (const item of sample) {
+        const hostname = job.items.find((i) => i.itemId === item.itemId)?.hostname;
+        if (!hostname) continue;
+        const dohResults = await checkDohBypass(hostname, 5000);
+        const bypassed = dohResults.filter((r) => r.canBypass);
+        if (bypassed.length > 0) {
+          console.log(`  ⚠ DoH bypass possible for ${hostname} via ${bypassed.map((b) => b.provider).join(', ')}`);
+        }
+        // Store DoH results in evidence
+        const resultItem = results.find((r) => r.itemId === item.itemId);
+        if (resultItem) {
+          (resultItem.evidence as Record<string, unknown>).doh_bypass = dohResults.map((r) => ({
+            provider: r.provider,
+            can_bypass: r.canBypass,
+            addresses: r.resolvedAddresses,
+            duration_ms: r.durationMs,
+          }));
+        }
+      }
+    }
 
     await apiCall(`/probes/${config.probeId}/results`, { method: 'POST', body: { jobId: job.jobId, results } });
     console.log(`  ✓ ${results.length} done — ${blocked} blocked, ${allowed} allowed`);
