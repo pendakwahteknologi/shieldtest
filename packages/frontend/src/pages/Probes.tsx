@@ -25,6 +25,48 @@ export default function Probes() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Probe Agents</h2>
+
+      {/* Setup Guide */}
+      <div className="bg-surface-800 rounded-lg border border-surface-500 p-5 mb-6">
+        <h3 className="text-sm font-medium text-accent-blue mb-3">How to Set Up a Probe</h3>
+        <p className="text-sm text-gray-300 mb-4">
+          A probe runs on any device (PC, Mac, laptop) connected to the network you want to test.
+          It performs DNS lookups through that network's router and reports back whether threats are blocked.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-medium text-gray-400 mb-1">Step 1 — Install Node.js (if not already installed)</p>
+            <div className="bg-surface-900 rounded p-3 text-xs font-mono text-gray-200 space-y-1">
+              <p className="text-gray-500"># macOS (using Homebrew)</p>
+              <p>brew install node</p>
+              <p className="text-gray-500 mt-2"># Windows — download from https://nodejs.org</p>
+              <p className="text-gray-500"># Linux (Ubuntu/Debian)</p>
+              <p>sudo apt install nodejs npm</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-400 mb-1">Step 2 — Download the probe from GitHub</p>
+            <div className="relative">
+              <pre className="bg-surface-900 rounded p-3 text-xs font-mono text-gray-200 overflow-x-auto">git clone https://github.com/pendakwahteknologi/shieldtest.git{'\n'}cd shieldtest/packages/probe{'\n'}npm install</pre>
+              <button onClick={() => navigator.clipboard.writeText('git clone https://github.com/pendakwahteknologi/shieldtest.git\ncd shieldtest/packages/probe\nnpm install')} className="absolute top-2 right-2 px-2 py-1 bg-surface-600 text-gray-300 rounded text-xs hover:bg-surface-500">Copy</button>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-400 mb-1">Step 3 — Register a probe below and copy the .env config</p>
+            <p className="text-xs text-gray-500">Register a new probe, then paste the generated config into a file called <code className="text-gray-300">.env</code> in the probe folder.</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-400 mb-1">Step 4 — Run the probe</p>
+            <div className="relative">
+              <pre className="bg-surface-900 rounded p-3 text-xs font-mono text-gray-200 overflow-x-auto">npx tsx src/index.ts</pre>
+              <button onClick={() => navigator.clipboard.writeText('npx tsx src/index.ts')} className="absolute top-2 right-2 px-2 py-1 bg-surface-600 text-gray-300 rounded text-xs hover:bg-surface-500">Copy</button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">The probe will wait for a benchmark job. Start a run from the Runs page and the probe will automatically test domains and exit when complete.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Register */}
       <div className="bg-surface-800 rounded-lg border border-surface-500 p-4 mb-6">
         <h3 className="text-sm text-gray-400 mb-3">Register New Probe</h3>
         <div className="flex gap-2">
