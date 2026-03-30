@@ -33,9 +33,24 @@ export default function Probes() {
         </div>
         {newToken && (
           <div className="mt-3 p-3 bg-surface-700 rounded border border-accent-blue">
-            <p className="text-sm text-accent-blue font-bold mb-1">Probe registered! Save these details — the token is shown only once.</p>
-            <p className="text-xs text-gray-300">Probe ID: <code className="text-gray-100">{newToken.probeId}</code></p>
-            <p className="text-xs text-gray-300 mt-1">Token: <code className="text-gray-100 break-all">{newToken.token}</code></p>
+            <p className="text-sm text-accent-blue font-bold mb-2">Probe registered! Save these details — the token is shown only once.</p>
+            <p className="text-xs text-gray-400 mb-1">Copy and paste this into <code>packages/probe/.env</code>:</p>
+            <div className="relative">
+              <pre className="text-xs text-gray-100 bg-surface-900 p-3 rounded overflow-x-auto select-all">{`SERVER_URL=https://my6.my/shieldtest/api
+PROBE_ID=${newToken.probeId}
+PROBE_TOKEN=${newToken.token}
+DNS_ONLY=true
+POLL_INTERVAL_MS=3000
+HEARTBEAT_INTERVAL_MS=15000`}</pre>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`SERVER_URL=https://my6.my/shieldtest/api\nPROBE_ID=${newToken.probeId}\nPROBE_TOKEN=${newToken.token}\nDNS_ONLY=true\nPOLL_INTERVAL_MS=3000\nHEARTBEAT_INTERVAL_MS=15000`);
+                }}
+                className="absolute top-2 right-2 px-2 py-1 bg-surface-600 text-gray-300 rounded text-xs hover:bg-surface-500"
+              >
+                Copy
+              </button>
+            </div>
           </div>
         )}
       </div>
