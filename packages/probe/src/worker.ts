@@ -59,12 +59,12 @@ async function checkItem(item: JobItem, timeoutMs: number): Promise<ProbeResult>
   };
 }
 
-export async function pollAndExecute(): Promise<boolean> {
+export async function pollAndExecute(): Promise<{ hadWork: boolean; itemCount: number }> {
   try {
     const job = await apiCall<Job>(`/probes/${config.probeId}/jobs`);
-    if (!job.items || job.items.length === 0) return false;
+    if (!job.items || job.items.length === 0) return { hadWork: false, itemCount: 0 };
 
-    console.log(`Received job ${job.jobId} with ${job.items.length} items`);
+    console.log(`  Testing ${job.items.length} domains...`);
 
     const results: ProbeResult[] = [];
     const concurrency = 5;
@@ -74,12 +74,15 @@ export async function pollAndExecute(): Promise<boolean> {
       results.push(...batchResults);
     }
 
+    const blocked = results.filter((r) => r.verdict.startsWith('BLOCKED')).length;
+    const allowed = results.filter((r) => r.verdict === 'ALLOWED').length;
+
     await apiCall(`/probes/${config.probeId}/results`, { method: 'POST', body: { jobId: job.jobId, results } });
-    console.log(`Submitted ${results.length} results for job ${job.jobId}`);
-    return true;
+    console.log(`  ✓ ${results.length} done — ${blocked} blocked, ${allowed} allowed`);
+    return { hadWork: true, itemCount: results.length };
   } catch (err) {
-    console.error('Poll error:', err);
-    return false;
+    console.error('  Poll error:', err);
+    return { hadWork: false, itemCount: 0 };
   }
 }
 
