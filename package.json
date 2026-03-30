@@ -1,0 +1,21 @@
+{
+  "name": "shieldtest",
+  "private": true,
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend",
+    "packages/probe"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:backend": "npm run dev -w packages/backend",
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "db:migrate": "npm run migrate -w packages/backend",
+    "db:generate": "npm run generate -w packages/backend",
+    "create-user": "npm run create-user -w packages/backend"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
