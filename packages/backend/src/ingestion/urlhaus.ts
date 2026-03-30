@@ -23,13 +23,14 @@ export function createUrlhausConnector(feedUrl: string): SourceConnector {
         const line = lines[i].trim();
         if (!line || line.startsWith('#')) continue;
 
-        const match = line.match(/"([^"]*?)","([^"]*?)","([^"]*?)","([^"]*?)"/);
-        if (!match) {
+        // CSV: "id","dateadded","url","url_status","last_online","threat","tags","urlhaus_link","reporter"
+        const fields = line.match(/"([^"]*)"/g);
+        if (!fields || fields.length < 3) {
           errors.push({ line: i + 1, raw: line.slice(0, 200), reason: 'Could not parse CSV line' });
           continue;
         }
 
-        const url = match[2];
+        const url = fields[2].replace(/^"|"$/g, '');
         const hostname = extractHostnameFromUrl(url);
 
         if (!hostname || !hostname.includes('.')) {

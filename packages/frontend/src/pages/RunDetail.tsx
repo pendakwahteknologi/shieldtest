@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import VerdictChart from '../components/VerdictChart';
 
-interface RunData { id: string; status: string; routerName: string | null; firmwareVersion: string | null; resolverMode: string | null; totalItems: number; completedItems: number; startedAt: string | null; completedAt: string | null; }
+interface RunData { id: string; status: string; routerName: string | null; firmwareVersion: string | null; resolverMode: string | null; totalItems: number; completedItems: number; startedAt: string | null; completedAt: string | null; profileId: string; probeId: string | null; }
 interface Scorecard { overallScore: number | null; malwareBlockRate: number | null; phishingBlockRate: number | null; adultFilterRate: number | null; adsTrackerBlockRate: number | null; cleanAllowRate: number | null; consistencyScore: number | null; latencyPenalty: number | null; }
-interface RunItem { hostname: string; category: string; verdict: string | null; latencyMs: number | null; }
+interface RunItem { hostname: string; category: string; verdict: string | null; latencyMs: number | null; evidenceJson: Record<string, unknown> | null; }
+interface DohBypassEntry { provider: string; can_bypass: boolean; addresses: string[]; duration_ms: number; }
 
 type FilterTab = 'all' | 'failures' | 'blocked' | 'allowed';
 
@@ -50,7 +51,7 @@ function verdictStyle(verdict: string | null): string {
 }
 
 function categoryLabel(cat: string): string {
-  const labels: Record<string, string> = { malware: 'Malware', phishing: 'Phishing', adult: 'Adult Content', ads: 'Ads', tracker: 'Trackers', clean: 'Clean (Safe)' };
+  const labels: Record<string, string> = { malware: 'Malware', phishing: 'Phishing', adult: 'Adult Content', ads: 'Ads', tracker: 'Trackers', clean: 'Clean (Safe)', c2: 'Command & Control', cryptomining: 'Cryptomining' };
   return labels[cat] || cat;
 }
 
@@ -79,11 +80,13 @@ function rateBar(label: string, rate: number | null, description: string, isClea
 
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [run, setRun] = useState<RunData | null>(null);
   const [score, setScore] = useState<Scorecard | null>(null);
   const [items, setItems] = useState<RunItem[]>([]);
   const [filter, setFilter] = useState<FilterTab>('failures');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [rerunning, setRerunning] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -91,6 +94,18 @@ export default function RunDetail() {
     api<{ data: Scorecard }>(`/runs/${id}/score`).then((r) => setScore(r.data)).catch(() => {});
     api<{ data: RunItem[] }>(`/runs/${id}/results?limit=200`).then((r) => setItems(r.data)).catch(() => {});
   }, [id]);
+
+  const runAgain = async () => {
+    if (!run) return;
+    setRerunning(true);
+    try {
+      const r = await api<{ data: { runId: string } }>('/runs', {
+        method: 'POST',
+        body: { profileId: run.profileId, probeId: run.probeId, routerName: run.routerName, firmwareVersion: run.firmwareVersion, resolverMode: run.resolverMode, notes: `Re-run of ${run.id}` },
+      });
+      navigate(`/runs/${r.data.runId}`);
+    } catch { setRerunning(false); }
+  };
 
   if (!run) return <p className="text-gray-400">Loading...</p>;
 
@@ -108,12 +123,21 @@ export default function RunDetail() {
     else if (i.verdict) categoryCounts[i.category].errors++;
   });
 
-  const totalBlocked = Object.values(verdictCounts).reduce((sum, c, _, arr) => {
-    return sum;
-  }, 0);
   const blockedCount = items.filter((i) => i.verdict?.startsWith('BLOCKED')).length;
   const allowedCount = items.filter((i) => i.verdict === 'ALLOWED').length;
   const errorCount = items.filter((i) => i.verdict && !i.verdict.startsWith('BLOCKED') && i.verdict !== 'ALLOWED').length;
+
+  // Extract DoH bypass data from evidence
+  const dohBypassResults: Array<{ hostname: string; entries: DohBypassEntry[] }> = [];
+  for (const item of items) {
+    const evidence = item.evidenceJson as Record<string, unknown> | null;
+    if (evidence?.doh_bypass) {
+      const entries = evidence.doh_bypass as DohBypassEntry[];
+      if (entries.some((e) => e.can_bypass)) {
+        dohBypassResults.push({ hostname: item.hostname, entries });
+      }
+    }
+  }
 
   // Filter items
   const filteredItems = items.filter((i) => {
@@ -200,6 +224,29 @@ export default function RunDetail() {
         </div>
       )}
 
+      {/* DoH Bypass Warning */}
+      {dohBypassResults.length > 0 && (
+        <div className="bg-accent-orange/10 border border-accent-orange/30 rounded-lg p-5 mb-6">
+          <h3 className="text-sm font-medium text-accent-orange mb-2">DNS-over-HTTPS Bypass Detected</h3>
+          <p className="text-sm text-gray-300 mb-3">
+            {dohBypassResults.length} blocked domain{dohBypassResults.length > 1 ? 's' : ''} can be resolved via DNS-over-HTTPS,
+            bypassing your network's DNS filtering. Users with browsers like Firefox (which enables DoH by default) may not be protected.
+          </p>
+          <div className="space-y-2">
+            {dohBypassResults.map((r) => (
+              <div key={r.hostname} className="bg-surface-800 rounded p-3 text-xs">
+                <span className="font-mono text-gray-100">{r.hostname}</span>
+                <span className="text-gray-500 ml-2">bypassed via</span>
+                <span className="text-accent-orange ml-1">{r.entries.filter((e) => e.can_bypass).map((e) => e.provider).join(', ')}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            Recommendation: Block outbound DNS-over-HTTPS traffic (port 443 to known DoH providers) or use a firewall that intercepts DoH.
+          </p>
+        </div>
+      )}
+
       {/* Verdict Chart + Category Summary side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-surface-800 rounded-lg border border-surface-500 p-4">
@@ -238,6 +285,9 @@ export default function RunDetail() {
       <div className="flex gap-2 mb-4">
         <a href={`/shieldtest/api/reports/${id}.csv`} className="px-3 py-1.5 bg-surface-700 text-gray-300 rounded text-sm hover:bg-surface-600">Export CSV</a>
         <a href={`/shieldtest/api/reports/${id}.json`} className="px-3 py-1.5 bg-surface-700 text-gray-300 rounded text-sm hover:bg-surface-600">Export JSON</a>
+        <button onClick={runAgain} disabled={rerunning || !run.probeId} className="px-3 py-1.5 bg-accent-blue text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50 ml-auto">
+          {rerunning ? 'Starting...' : 'Run Again'}
+        </button>
       </div>
 
       {/* Filtered Results Table */}
