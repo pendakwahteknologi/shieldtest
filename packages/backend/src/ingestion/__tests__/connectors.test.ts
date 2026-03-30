@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createFeodoConnector } from '../feodo.js';
+import { createThreatFoxConnector } from '../threatfox.js';
+import { createCoinBlockerConnector } from '../coinblocker.js';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -99,6 +102,7 @@ describe('Tranco connector', () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      headers: { get: () => 'text/csv' },
       text: () => Promise.resolve(csvData),
     });
 
@@ -136,5 +140,38 @@ describe('StevenBlack connector', () => {
     expect(result.records[0].rawHostname).toBe('ads.example.com');
     expect(result.records[0].category).toBe('ads');
     expect(result.records[0].confidence).toBe(70);
+  });
+});
+
+describe('Feodo Tracker connector', () => {
+  it('should parse IP blocklist', async () => {
+    const data = `# Feodo Tracker Recommended Blocklist
+# comment line
+2024-01-01,192.168.1.100,443,online,2024-01-01,Dridex
+2024-01-02,10.0.0.50,8443,online,2024-01-02,QakBot
+invalid line`;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(data) });
+    const connector = createFeodoConnector('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt');
+    const result = await connector.fetch();
+    expect(result.records.length).toBe(2);
+    expect(result.records[0].category).toBe('c2');
+    expect(result.records[0].confidence).toBe(90);
+  });
+});
+
+describe('CoinBlocker connector', () => {
+  it('should parse plain domain list', async () => {
+    const data = `# CoinBlocker list
+coin-hive.com
+miner.example.org
+notadomain`;
+
+    mockFetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(data) });
+    const connector = createCoinBlockerConnector('https://zerodot1.gitlab.io/CoinBlockerLists/list.txt');
+    const result = await connector.fetch();
+    expect(result.records.length).toBe(2);
+    expect(result.records[0].category).toBe('cryptomining');
+    expect(result.records[0].confidence).toBe(75);
   });
 });

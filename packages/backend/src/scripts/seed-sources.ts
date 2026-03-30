@@ -23,7 +23,7 @@ const SOURCES = [
   {
     name: 'tranco',
     type: 'clean',
-    url: 'https://tranco-list.eu/download/6Q2V4/1000000',
+    url: 'https://tranco-list.eu/top-1m.csv.zip',
     refreshIntervalMins: 10080,
   },
   {
@@ -36,6 +36,24 @@ const SOURCES = [
     name: 'stevenblack-adult',
     type: 'category',
     url: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts',
+    refreshIntervalMins: 10080,
+  },
+  {
+    name: 'feodo',
+    type: 'threat',
+    url: 'https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.txt',
+    refreshIntervalMins: 360,
+  },
+  {
+    name: 'threatfox',
+    type: 'threat',
+    url: 'https://threatfox.abuse.ch/export/csv/recent/',
+    refreshIntervalMins: 360,
+  },
+  {
+    name: 'coinblocker',
+    type: 'category',
+    url: 'https://zerodot1.gitlab.io/CoinBlockerLists/list.txt',
     refreshIntervalMins: 10080,
   },
 ];

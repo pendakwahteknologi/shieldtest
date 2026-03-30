@@ -54,6 +54,10 @@ export async function calculateAndStoreScorecard(runId: string): Promise<void> {
   const phishingBlockRate = calculateBlockRate(byCategory.get('phishing') || []);
   const adultFilterRate = calculateBlockRate(byCategory.get('adult') || []);
   const adsTrackerBlockRate = calculateBlockRate([...(byCategory.get('ads') || []), ...(byCategory.get('tracker') || [])]);
+  const c2Items = byCategory.get('c2') || [];
+  const c2BlockRate = calculateBlockRate(c2Items);
+  const cryptominingItems = byCategory.get('cryptomining') || [];
+  const cryptominingBlockRate = calculateBlockRate(cryptominingItems);
   const cleanItems = (byCategory.get('clean') || []).filter((i) => i.verdict && !INFRA_VERDICTS.has(i.verdict));
   const cleanAllowRate = cleanItems.length > 0 ? cleanItems.filter((i) => i.verdict === 'ALLOWED').length / cleanItems.length : 1;
 

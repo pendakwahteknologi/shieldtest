@@ -28,11 +28,13 @@
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",
     "postgres": "^3.4.0",
-    "tldts": "^7.0.27"
+    "tldts": "^7.0.27",
+    "unzipper": "^0.12.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
     "@types/node": "^20.0.0",
+    "@types/unzipper": "^0.10.11",
     "drizzle-kit": "^0.21.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",

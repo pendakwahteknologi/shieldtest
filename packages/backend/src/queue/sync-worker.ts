@@ -8,6 +8,9 @@ import { createOpenPhishConnector } from '../ingestion/openphish.js';
 import { createPhishTankConnector } from '../ingestion/phishtank.js';
 import { createTrancoConnector } from '../ingestion/tranco.js';
 import { createStevenBlackConnector } from '../ingestion/stevenblack.js';
+import { createFeodoConnector } from '../ingestion/feodo.js';
+import { createThreatFoxConnector } from '../ingestion/threatfox.js';
+import { createCoinBlockerConnector } from '../ingestion/coinblocker.js';
 import type { SourceConnector } from '../ingestion/connector.js';
 
 const CONNECTOR_MAP: Record<string, (url: string) => SourceConnector> = {
@@ -17,6 +20,9 @@ const CONNECTOR_MAP: Record<string, (url: string) => SourceConnector> = {
   tranco: (url) => createTrancoConnector(url),
   'stevenblack-ads': (url) => createStevenBlackConnector(url, 'ads'),
   'stevenblack-adult': (url) => createStevenBlackConnector(url, 'adult'),
+  feodo: (url) => createFeodoConnector(url),
+  threatfox: (url) => createThreatFoxConnector(url),
+  coinblocker: (url) => createCoinBlockerConnector(url),
 };
 
 export interface SyncJobData {
