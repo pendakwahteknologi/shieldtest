@@ -7,6 +7,9 @@ import { config } from './config.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { sourceRoutes } from './routes/sources.js';
+import { profileRoutes } from './routes/profiles.js';
+import { runRoutes } from './routes/runs.js';
+import { probeRoutes } from './routes/probes.js';
 import { createSyncWorker } from './queue/sync-worker.js';
 import { scheduleSyncJobs } from './queue/sync-scheduler.js';
 import { RATE_LIMITS } from '@shieldtest/shared';
@@ -42,6 +45,9 @@ await app.register(rateLimit, {
 await app.register(healthRoutes, { prefix: config.apiBasePath });
 await app.register(authRoutes, { prefix: config.apiBasePath });
 await app.register(sourceRoutes, { prefix: config.apiBasePath });
+await app.register(profileRoutes, { prefix: config.apiBasePath });
+await app.register(runRoutes, { prefix: config.apiBasePath });
+await app.register(probeRoutes, { prefix: config.apiBasePath });
 
 // Start
 const start = async () => {
