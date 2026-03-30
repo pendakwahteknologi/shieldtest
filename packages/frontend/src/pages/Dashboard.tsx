@@ -16,8 +16,12 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadDashboard = () => api<{ data: DashboardData }>('/dashboard/overview').then((r) => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
+
   useEffect(() => {
-    api<{ data: DashboardData }>('/dashboard/overview').then((r) => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
+    loadDashboard();
+    const interval = setInterval(loadDashboard, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <p className="text-gray-400">Loading...</p>;
