@@ -17,9 +17,12 @@ interface ProbeResult {
 
 async function apiCall<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const url = `${config.serverUrl}${path}`;
+  const headers: Record<string, string> = { Authorization: `Bearer ${config.probeToken}` };
+  if (options.body) headers['Content-Type'] = 'application/json';
+
   const response = await fetch(url, {
     method: options.method || 'GET',
-    headers: { Authorization: `Bearer ${config.probeToken}`, 'Content-Type': 'application/json' },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   if (!response.ok) throw new Error(`API call failed: ${response.status} ${response.statusText}`);

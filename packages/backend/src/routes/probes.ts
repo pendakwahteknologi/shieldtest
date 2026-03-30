@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireProbeAuth } from '../middleware/probe-auth.js';
 import { registerProbe, updateHeartbeat, deleteProbe } from '../services/probes.js';
-import { submitResults, benchmarkQueue } from '../services/benchmark.js';
+import { submitResults } from '../services/benchmark.js';
 
 export async function probeRoutes(app: FastifyInstance) {
   app.get('/probes', { preHandler: [requireAuth] }, async () => {
@@ -37,11 +37,40 @@ export async function probeRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>('/probes/:id/jobs', { preHandler: [requireProbeAuth] }, async (request) => {
-    const job = await benchmarkQueue.getNextJob(request.params.id);
-    if (!job) return { items: [] };
-    const data = job.data as { runId: string; probeId: string; items: Array<{ itemId: string; hostname: string; category: string }> };
-    if (data.probeId !== request.params.id) return { items: [] };
-    return { jobId: job.id, runId: data.runId, items: data.items, config: { timeoutMs: 5000, doHttpCheck: true } };
+    // Find a running benchmark run assigned to this probe with untested items
+    const [run] = await db
+      .select({ id: schema.benchmarkRuns.id })
+      .from(schema.benchmarkRuns)
+      .where(and(
+        eq(schema.benchmarkRuns.probeId, request.params.id),
+        eq(schema.benchmarkRuns.status, 'running'),
+      ))
+      .limit(1);
+
+    if (!run) return { items: [] };
+
+    // Get up to 50 untested items from this run
+    const items = await db
+      .select({
+        id: schema.benchmarkRunItems.id,
+        hostname: schema.benchmarkRunItems.hostname,
+        category: schema.benchmarkRunItems.category,
+      })
+      .from(schema.benchmarkRunItems)
+      .where(and(
+        eq(schema.benchmarkRunItems.runId, run.id),
+        isNull(schema.benchmarkRunItems.verdict),
+      ))
+      .limit(50);
+
+    if (items.length === 0) return { items: [] };
+
+    return {
+      jobId: `job-${run.id}-${Date.now()}`,
+      runId: run.id,
+      items: items.map((i) => ({ itemId: i.id, hostname: i.hostname, category: i.category })),
+      config: { timeoutMs: 5000, doHttpCheck: false },
+    };
   });
 
   app.post<{ Params: { id: string } }>('/probes/:id/results', { preHandler: [requireProbeAuth] }, async (request) => {
