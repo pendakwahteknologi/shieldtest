@@ -6,6 +6,9 @@ import rateLimit from '@fastify/rate-limit';
 import { config } from './config.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
+import { sourceRoutes } from './routes/sources.js';
+import { createSyncWorker } from './queue/sync-worker.js';
+import { scheduleSyncJobs } from './queue/sync-scheduler.js';
 import { RATE_LIMITS } from '@shieldtest/shared';
 
 const app = Fastify({
@@ -38,12 +41,17 @@ await app.register(rateLimit, {
 // Routes
 await app.register(healthRoutes, { prefix: config.apiBasePath });
 await app.register(authRoutes, { prefix: config.apiBasePath });
+await app.register(sourceRoutes, { prefix: config.apiBasePath });
 
 // Start
 const start = async () => {
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
     app.log.info(`ShieldTest backend listening on port ${config.port}`);
+    // Start BullMQ worker and scheduler
+    createSyncWorker();
+    await scheduleSyncJobs();
+    app.log.info('Sync worker and scheduler started');
   } catch (err) {
     app.log.error(err);
     process.exit(1);
