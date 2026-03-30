@@ -1,0 +1,39 @@
+{
+  "name": "@shieldtest/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "migrate": "drizzle-kit migrate",
+    "generate": "drizzle-kit generate",
+    "create-user": "tsx src/scripts/create-user.ts"
+  },
+  "dependencies": {
+    "@shieldtest/shared": "*",
+    "fastify": "^4.28.0",
+    "@fastify/cookie": "^9.3.0",
+    "@fastify/cors": "^9.0.0",
+    "@fastify/rate-limit": "^9.1.0",
+    "@fastify/static": "^7.0.0",
+    "drizzle-orm": "^0.30.0",
+    "postgres": "^3.4.0",
+    "ioredis": "^5.4.0",
+    "bullmq": "^5.7.0",
+    "bcrypt": "^5.1.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0",
+    "drizzle-kit": "^0.21.0",
+    "vitest": "^1.6.0"
+  }
+}
