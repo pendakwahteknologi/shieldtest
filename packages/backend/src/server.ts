@@ -10,6 +10,9 @@ import { sourceRoutes } from './routes/sources.js';
 import { profileRoutes } from './routes/profiles.js';
 import { runRoutes } from './routes/runs.js';
 import { probeRoutes } from './routes/probes.js';
+import { dashboardRoutes } from './routes/dashboard.js';
+import { reportRoutes } from './routes/reports.js';
+import { settingsRoutes } from './routes/settings.js';
 import { createSyncWorker } from './queue/sync-worker.js';
 import { scheduleSyncJobs } from './queue/sync-scheduler.js';
 import { RATE_LIMITS } from '@shieldtest/shared';
@@ -48,6 +51,9 @@ await app.register(sourceRoutes, { prefix: config.apiBasePath });
 await app.register(profileRoutes, { prefix: config.apiBasePath });
 await app.register(runRoutes, { prefix: config.apiBasePath });
 await app.register(probeRoutes, { prefix: config.apiBasePath });
+await app.register(dashboardRoutes, { prefix: config.apiBasePath });
+await app.register(reportRoutes, { prefix: config.apiBasePath });
+await app.register(settingsRoutes, { prefix: config.apiBasePath });
 
 // Start
 const start = async () => {

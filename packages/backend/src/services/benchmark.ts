@@ -2,6 +2,7 @@ import { eq, and, gte, sql } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { Queue } from 'bullmq';
 import { redisConnection } from '../queue/connection.js';
+import { calculateAndStoreScorecard } from '../scoring/engine.js';
 
 export const benchmarkQueue = new Queue('benchmark-jobs', {
   connection: redisConnection,
@@ -158,5 +159,6 @@ export async function submitResults(runId: string, results: Array<{ itemId: stri
 
   if (count >= run.totalItems) {
     await db.update(schema.benchmarkRuns).set({ status: 'completed', completedAt: new Date() }).where(eq(schema.benchmarkRuns.id, runId));
+    await calculateAndStoreScorecard(runId);
   }
 }
