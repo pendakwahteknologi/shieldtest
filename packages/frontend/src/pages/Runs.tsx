@@ -37,9 +37,15 @@ export default function Runs() {
       api<{ data: Probe[] }>('/probes'),
     ]);
     setProfiles(profileRes.data);
-    setProbes(probeRes.data);
+    // Sort probes: online first, then by name
+    const sortedProbes = [...probeRes.data].sort((a, b) => {
+      if (a.status === 'online' && b.status !== 'online') return -1;
+      if (a.status !== 'online' && b.status === 'online') return 1;
+      return a.name.localeCompare(b.name);
+    });
+    setProbes(sortedProbes);
     if (profileRes.data.length > 0) setForm((f) => ({ ...f, profileId: profileRes.data[0].id }));
-    if (probeRes.data.length > 0) setForm((f) => ({ ...f, probeId: probeRes.data[0].id }));
+    if (sortedProbes.length > 0) setForm((f) => ({ ...f, probeId: sortedProbes[0].id }));
     setShowForm(true);
     setError('');
   };
@@ -103,7 +109,7 @@ export default function Runs() {
               <span className="text-sm text-gray-300">Probe Agent</span>
               <select value={form.probeId} onChange={(e) => setForm({ ...form, probeId: e.target.value })}
                 className="mt-1 block w-full px-3 py-2 bg-surface-700 border border-surface-500 rounded text-gray-100 text-sm">
-                {probes.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
+                {probes.map((p) => <option key={p.id} value={p.id}>{p.status === 'online' ? '● ' : '○ '}{p.name} ({p.status})</option>)}
               </select>
             </label>
 
