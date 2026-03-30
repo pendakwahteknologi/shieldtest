@@ -10,6 +10,25 @@ Deploy it on a server, run a lightweight probe on any device behind the network 
 
 ---
 
+## Features
+
+- **208,000+ threat indicators** from 9 public intelligence feeds across 6 categories
+- **Scored reports (0–100)** with letter grades, category breakdowns, and plain English explanations
+- **DNS-over-HTTPS bypass detection** — tests if blocked domains can be resolved via Cloudflare, Google, or Quad9 DoH, exposing a critical gap in most firewalls
+- **C2/Botnet testing** — tests whether your network blocks known command & control infrastructure
+- **Run from any device** — lightweight probe agent runs on Mac, Windows, Linux, or Raspberry Pi
+- **Auto-terminating probe** — starts, tests, submits results, and exits cleanly when done
+- **One-click .env copy** — register a probe in the UI and copy the config with one click
+- **Start benchmarks from the UI** — New Run form with profile, probe, and router selection
+- **Real-time progress** — runs page auto-refreshes with progress bars during active benchmarks
+- **Export CSV/JSON** — download raw results for further analysis
+- **Source management** — enable/disable feeds, view sync history, see error details
+- **Configurable scoring** — adjust category weights in Settings
+- **Dark theme** — Cloudflare Radar-inspired UI, clean and data-dense
+- **Safe by design** — DNS lookups only, no browsing, no downloads, no script execution
+
+---
+
 ## How It Works
 
 ```
@@ -35,11 +54,12 @@ Deploy it on a server, run a lightweight probe on any device behind the network 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Server** ingests public threat intelligence feeds (URLhaus, OpenPhish, PhishTank, StevenBlack, Tranco)
-2. **You create a benchmark** — the server samples domains across malware, phishing, adult, ads/tracker, and clean categories
+1. **Server** ingests public threat intelligence feeds (URLhaus, OpenPhish, Feodo Tracker, ThreatFox, StevenBlack, Tranco)
+2. **You create a benchmark** — the server samples domains across malware, phishing, C2/botnet, adult, ads/tracker, and clean categories
 3. **Probe agent** runs on a device behind the router you're testing — it performs DNS lookups through that network
-4. **Server scores the results** — blocked threats = good, allowed threats = bad, blocked clean sites = false positive
-5. **Dashboard** shows your score (0–100), category breakdown, and detailed results
+4. **Probe tests DoH bypass** — checks if blocked domains can be resolved via DNS-over-HTTPS (Cloudflare, Google, Quad9), exposing a critical filtering gap
+5. **Server scores the results** — blocked threats = good, allowed threats = bad, blocked clean sites = false positive
+6. **Dashboard** shows your score (0–100), category breakdown, DoH bypass warnings, and detailed results
 
 ---
 
@@ -122,13 +142,13 @@ Reload NGINX: `sudo nginx -s reload`
 ### Running a Benchmark
 
 1. Log in at `https://yourserver/shieldtest/`
-2. Go to **Sources** → click **Sync** on each source to pull threat data
+2. Go to **Sources** → click **Sync Now** on each source to pull threat data
 3. Go to **Profiles** → create a benchmark profile (e.g. 50 samples per category)
-4. Go to **Probes** → register a probe and copy the `.env` config
+4. Go to **Probes** → register a probe, copy the `.env` config (one-click copy button)
 5. Set up the probe on a device behind the network you're testing (see below)
-6. Go to **Runs** or trigger a run via the API
+6. Go to **Runs** → click **New Run** → select profile, probe, enter router name → **Start Benchmark**
 7. The probe picks up the job automatically, tests domains, and exits when done
-8. View your results on the dashboard
+8. View your scored report with category breakdown, DoH bypass warnings, and detailed results
 
 ---
 
@@ -232,15 +252,17 @@ Weights are configurable in Settings.
 
 ## Threat Intelligence Sources
 
-| Source | Category | What it provides |
-|--------|----------|-----------------|
-| [URLhaus](https://urlhaus.abuse.ch/) | Malware | Active malware distribution URLs |
-| [OpenPhish](https://openphish.com/) | Phishing | Community phishing feed |
-| [PhishTank](https://phishtank.org/) | Phishing | Verified phishing database |
-| [StevenBlack](https://github.com/StevenBlack/hosts) | Ads / Adult | Curated hosts-file blocklists |
-| [Tranco](https://tranco-list.eu/) | Clean | Top popular domains (false positive baseline) |
+| Source | Category | Indicators | What it provides |
+|--------|----------|-----------|-----------------|
+| [URLhaus](https://urlhaus.abuse.ch/) | Malware | ~10,000 | Active malware distribution URLs and hostnames |
+| [OpenPhish](https://openphish.com/) | Phishing | ~250 | Community phishing URL feed |
+| [Feodo Tracker](https://feodotracker.abuse.ch/) | C2 / Botnet | ~1–50 | Active botnet command & control IPs |
+| [ThreatFox](https://threatfox.abuse.ch/) | C2 / Botnet | ~800 | IOCs from malware analysis (C2 domains, payload URLs) |
+| [StevenBlack](https://github.com/StevenBlack/hosts) | Ads | ~61,000 | Unified hosts blocklist for ads and trackers |
+| [StevenBlack](https://github.com/StevenBlack/hosts) | Adult | ~125,000 | Porn/adult content hosts extension |
+| [Tranco](https://tranco-list.eu/) | Clean | 10,000 | Top popular domains (false positive baseline) |
 
-Sources sync automatically on schedule. Manual sync available from the Sources page.
+**Total: ~208,000+ indicators** across 6 categories. Sources sync automatically on schedule. Manual sync available from the Sources page.
 
 ---
 
@@ -279,10 +301,10 @@ shieldtest/
 │   │   └── package.json
 │   ├── probe/            # Lightweight test agent
 │   │   └── src/
-│   │       ├── dns.ts         # DNS resolution
+│   │       ├── dns.ts         # DNS resolution + DoH bypass testing
 │   │       ├── http.ts        # HTTP HEAD checks
 │   │       ├── sinkhole.ts    # Sinkhole detection
-│   │       └── worker.ts      # Job polling
+│   │       └── worker.ts      # Job polling + result submission
 │   └── shared/           # Shared TypeScript types
 ├── config/
 │   ├── nginx.conf             # NGINX config example
@@ -361,6 +383,7 @@ ShieldTest is designed for **defensive security testing only**. It benchmarks fi
 - DNS resolution checks (does the domain resolve or return NXDOMAIN?)
 - Optional HTTP HEAD requests (is there a block page?)
 - Sinkhole IP detection (common filtering indicators)
+- DNS-over-HTTPS bypass testing (can users circumvent your DNS filtering?)
 
 ### What it never does
 - Render, screenshot, or preview malicious or adult pages
@@ -426,12 +449,50 @@ npm run db:migrate
 
 ## Use Cases
 
-- **Evaluate router security** — compare consumer routers' built-in filtering
+- **Evaluate router security** — compare consumer routers' built-in DNS filtering
 - **Test DNS filtering services** — benchmark Pi-hole, NextDNS, Cloudflare Gateway, OpenDNS
-- **Audit enterprise firewalls** — verify FortiGate, Palo Alto, Sophos URL filtering policies
-- **Compliance testing** — demonstrate DNS filtering coverage for security audits
-- **Before/after comparison** — measure improvement after enabling new security policies
-- **Multi-site comparison** — test the same profile across different office locations
+- **Audit enterprise firewalls** — verify FortiGate, Palo Alto, Sophos, Cisco Umbrella URL filtering policies
+- **Detect DoH bypass risk** — find out if users can circumvent your DNS filtering with DNS-over-HTTPS
+- **Test C2 blocking** — verify your network blocks botnet command & control infrastructure
+- **Compliance evidence** — generate scored reports demonstrating DNS filtering coverage for security audits
+- **Before/after comparison** — measure improvement after enabling new security policies or upgrading firmware
+- **Multi-site testing** — run the same benchmark from different offices, VLANs, or networks
+- **MSP benchmarking** — compare client network security postures with standardised tests
+
+---
+
+## Example Output
+
+A typical benchmark run on an unfiltered network scores around **18–25/100 (Grade F)**:
+
+```
+Overall Score: 18.93/100 (F)
+─────────────────────────────
+Malware Protection:     0.0%   ← no malware domains blocked
+Phishing Protection:   12.0%   ← almost no phishing blocked
+Adult Content Filter:  17.4%   ← some domains expired/down
+Ads/Tracker Blocking:  18.4%   ← some domains expired/down
+Clean Site Access:    100.0%   ← no false positives (good)
+C2/Botnet Blocking:     0.0%   ← no C2 infrastructure blocked
+
+⚠ DoH Bypass: 3 blocked domains can be resolved via Cloudflare DoH
+  Recommendation: Block outbound DoH traffic
+```
+
+After enabling a DNS filter (e.g. Pi-hole, NextDNS), scores typically jump to **70–90+**.
+
+---
+
+## Roadmap
+
+See [TODO.md](TODO.md) for the full roadmap, including:
+- TLS inspection testing
+- Firewall comparison mode
+- PDF report generation
+- Scheduled recurring benchmarks
+- Multi-probe orchestration
+- Compliance framework mapping (NIST, CIS, ISO 27001)
+- Probe as a Docker container / standalone binary
 
 ---
 
